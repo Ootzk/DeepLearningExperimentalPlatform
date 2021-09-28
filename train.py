@@ -215,11 +215,7 @@ def register_tb_logger_handlers(trainer, evaluator, optimizer, tb_logger, config
         
         
 def prepare(config):
-<<<<<<< HEAD
     model = get_model_skeleton(config['model'], config['dataloader']['dataset'])
-=======
-    model = get_model_skeleton(config['model']['backbone'], config['dataloader']['dataset'])
->>>>>>> f8a4cc53d08c223903c4a2aa98fd49ff2f4444c7
     model = model.to(idist.device())
     model = DDP(model, device_ids=[idist.get_local_rank()], find_unused_parameters=True)
     
