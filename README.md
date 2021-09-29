@@ -24,3 +24,7 @@ Also you have to unstage materials/, unittest.ipynb, cause they are heavy and no
 4. run the script: 
 > nohup python train.py Q > log.out; jobs; tail -f log.out
 5. analyze the results with analyze.py. (maybe you can make new notebook to visualize)
+
+## Sample Result
+![image](https://user-images.githubusercontent.com/30234176/135199986-029d9fbc-aa20-4776-84ed-7707e7b96eb2.png)
+Sample configuration's train result log visualized by tensorboard.
