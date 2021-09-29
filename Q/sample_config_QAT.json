@@ -1,18 +1,17 @@
 {
     "experiment": {
-        "title": "Test - QAT",
-        "ID": 1
+        "ID": 1,
+        "title": "Test - QAT"
     },
     "model": {
-        "backbone": "resnet18",
-        "variation": {
-            "type": "QAT",
-            "config": {
-                "weight": 8,
-                "activation": 8,
-                
-                "weight_scaling_per_output_channel": true
-            }
+        "arch": "resnet18",
+        "theme": "QAT",
+        "variation": 1,
+        "config": {
+            "weight": 8,
+            "activation": 8,
+            
+            "weight_scaling_per_output_channel": true
         }
     },
     "dataloader": {

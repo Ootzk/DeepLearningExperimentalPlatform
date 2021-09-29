@@ -4,6 +4,7 @@ train.py
 model train related components and functions.
 """
 from datetime import datetime
+import importlib
 import json
 import os
 from pathlib import Path
@@ -28,7 +29,7 @@ from ignite.metrics import Loss, Accuracy, TopKCategoricalAccuracy, RunningAvera
 from ignite.handlers import Checkpoint, DiskSaver, global_step_from_engine
 from ignite.utils import manual_seed
 
-from architectures import *
+import architectures
 
 ###############################################################################################################
 seed = 123
@@ -37,8 +38,6 @@ manual_seed(seed)
 os.environ['PYTHONHASHSEED'] = str(seed)
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
-
-save_architectures = True
 
 ###############################################################################################################
 dataset_location = {
@@ -54,32 +53,32 @@ normalization = {
     'DEBUG':    Normalize((0.5000, 0.5000, 0.5000), (0.2000, 0.2000, 0.2000))
 }
 
-creators = {
-    'resnet18_Baseline': resnet18_Baseline,
-    'resnet34_Baseline': resnet34_Baseline,
-    'resnet50_Baseline': resnet50_Baseline,
-    
-    'resnet18_QAT': resnet18_QAT,
-    'resnet34_QAT': resnet34_QAT,
-    'resnet50_QAT': resnet50_QAT,
-    
-    'resnet18_SE': resnet18_SE,
-    'resnet34_SE': resnet34_SE,
-    'resnet50_SE': resnet50_SE
+theme_abbreviations = {
+    'QAT': 'Quantization_Aware_Training',
+    'SE': 'Squeeze_and_Excitation'
 }
 
 ###############################################################################################################
-def get_model_skeleton(model_config, target_dataset):
-    variation = model_config['variation']['type']
-    if variation is None:
-        variation = 'Baseline'
+def load_model(config: dict):
+    target_dataset = config['dataloader']['dataset']
+    model_config = config['model']
+    
+    arch = model_config['arch']
+    
+    theme = model_config['theme']
+    theme_import_dir = theme_abbreviations.get(theme, theme)
+    
+    variation = model_config['variation']
+    
+    import_dir = f'architectures.{theme_import_dir}'
+    if variation is not None:
+        variation = str(variation).zfill(2)
+        import_dir = f'{import_dir}.{variation}'
         
-    if variation not in ['Baseline', 'QAT', 'SE']:
-        raise NotImplementedError(f'variation {variation} does not supported')
-        
-    arch = f'{model_config["backbone"]}_{variation}'
-    return creators[arch](target_dataset, model_config['variation']['config'])
-
+    imported = importlib.import_module(import_dir)
+    callsign = f'{arch}_{theme}'
+    
+    return imported.__dict__[callsign](target_dataset, model_config['config'])
 
 
 def get_transform(dataset):
@@ -109,26 +108,24 @@ def get_train_eval_datasets(dataset):
         train_ds = datasets.__dict__[dataset](root=dataset_location[dataset], train=True, transform=train_transform)
         eval_ds  = datasets.__dict__[dataset](root=dataset_location[dataset], train=False, transform=eval_transform)
     elif dataset == 'ImageNet':
-        train_ds = datasets.ImageFolder('{0}/train'.format(dataset_location[dataset]), transform=train_transform)
-        eval_ds = datasets.ImageFolder('{0}/val'.format(dataset_location[dataset]), transform=eval_transform)
+        train_ds = datasets.ImageFolder(f'{dataset_location[dataset]}/train', transform=train_transform)
+        eval_ds  = datasets.ImageFolder(f'{dataset_location[dataset]}/val', transform=eval_transform)
     
     return train_ds, eval_ds
 
 
 
 def get_save_handler(config):
-    title = config['experiment']['title']
-    ID = str(config['experiment']['ID']).zfill(2)
+    ID = str(config['experiment']['ID']).zfill(4)
     
-    return DiskSaver('experiments/{0}/{1}/checkpoints'.format(title, ID), require_empty=True, create_dir=True)
+    return DiskSaver(f'experiments/{ID}/checkpoints', require_empty=True, create_dir=True)
 
 
 
 def get_tb_logger(config):
-    title = config['experiment']['title']
-    ID = str(config['experiment']['ID']).zfill(2)
+    ID = str(config['experiment']['ID']).zfill(4)
     
-    return SummaryWriter('experiments/{0}/{1}/tensorboards'.format(title, ID))
+    return SummaryWriter(f'experiments/{ID}/tensorboards')
 
 
 
@@ -174,7 +171,7 @@ def create_trainer(model, optimizer, loss_function, scheduler, config):
             
     if config['resume_from'] is not None:
         checkpoint_fp = Path(config['resume_from'])
-        assert checkpoint_fp.exists(), "Checkpoint '{}' is not found".format(checkpoint_fp.as_posix())
+        assert checkpoint_fp.exists(), f'Checkpoint {checkpoint_fp.as_posix()} is not found'
         checkpoint = torch.load(checkpoint_fp.as_posix(), map_location='cpu')
         Checkpoint.load_objects(to_load={"trainer": trainer, "model": model, "optimizer": optimizer},
                                 checkpoint=checkpoint)
@@ -215,7 +212,7 @@ def register_tb_logger_handlers(trainer, evaluator, optimizer, tb_logger, config
         
         
 def prepare(config):
-    model = get_model_skeleton(config['model'], config['dataloader']['dataset'])
+    model = load_model(config)
     model = model.to(idist.device())
     model = DDP(model, device_ids=[idist.get_local_rank()], find_unused_parameters=True)
     
@@ -277,21 +274,16 @@ def run(config):
         
         
         
-def save_current_component_and_model_files_and_given_configuration_file(config_as_argument):
+def authorize_config(config_as_argument):
     with open(config_as_argument, 'r') as config_file:
         config = json.load(config_file)
         
-        title = config['experiment']['title']
-        ID = str(config['experiment']['ID']).zfill(2)
-        
-        os.makedirs('experiments/{0}/{1}'.format(title, ID))
+        ID = str(config['experiment']['ID']).zfill(4)
+        os.makedirs(f'experiments/{ID}')
         config['datetime'] = datetime.now().strftime("%Y%m%d")
-        with open('experiments/{0}/{1}/config.json'.format(title, ID), 'w') as save_config_file:
-            json.dump(config, save_config_file, indent=4)
-    
-    if save_architectures:
-        shutil.copytree('architectures',
-                        'experiments/{0}/{1}/architectures'.format(title, ID))
+        with open(f'experiments/{ID}/config.json', 'w') as authorized_config_file:
+            json.dump(config, authorized_config_file, indent=4)
+            
     return config
         
     
@@ -300,8 +292,8 @@ if __name__ == "__main__":
     if os.path.isdir(sys.argv[1]):
         for filename in sorted(os.listdir(sys.argv[1])):
             if filename.endswith('.json'):
-                config = save_current_component_and_model_files_and_given_configuration_file('Q/{0}'.format(filename))
+                config = authorize_config(f'Q/{filename}')
                 run(config)
     else:
-        config = save_current_component_and_model_files_and_given_configuration_file(sys.argv[1])
+        config = authorize_config(sys.argv[1])
         run(config)

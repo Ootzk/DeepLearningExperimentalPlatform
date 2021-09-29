@@ -1,15 +1,14 @@
 {
     "experiment": {
-        "title": "Test - SE",
-        "ID": 1
+        "ID": 1,
+        "title": "Test - SE"
     },
     "model": {
-        "backbone": "resnet18",
-        "variation": {
-            "type": "SE",
-            "config": {
-                "reduction": 16
-            }
+        "arch": "resnet18",
+        "theme": "SE",
+        "variation": 1,
+        "config": {
+            "reduction": 16
         }
     },
     "dataloader": {

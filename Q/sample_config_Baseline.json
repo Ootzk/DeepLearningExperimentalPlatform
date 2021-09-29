@@ -1,19 +1,16 @@
 {
     "experiment": {
-        "title": "Test - Baseline",
-        "ID": 1
+        "ID": 1,
+        "title": "Test - Baseline"
     },
     "model": {
-        "backbone": "resnet18",
-        "variation": {
-            "type": "Baseline",
-            "config": {
-                
-            }
-        }
+        "arch": "resnet18",
+        "theme": "Baseline",
+        "variation": null,
+        "config": null
     },
     "dataloader": {
-        "dataset": "ImageNet",
+        "dataset": "CIFAR100",
         "train_loader_params": {
             "batch_size": 256,
             "num_workers": 32,
