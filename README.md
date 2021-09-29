@@ -26,5 +26,5 @@ Also you have to unstage materials/, unittest.ipynb, cause they are heavy and no
 5. analyze the results with analyze.py. (maybe you can make new notebook to visualize)
 
 ## Sample Result
-![image](https://user-images.githubusercontent.com/30234176/135199986-029d9fbc-aa20-4776-84ed-7707e7b96eb2.png)
+![image](https://user-images.githubusercontent.com/30234176/135206969-4c558137-ba26-4ece-bfec-2fa98218beae.png)
 Sample configuration's train result log visualized by tensorboard.
