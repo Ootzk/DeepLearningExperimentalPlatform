@@ -53,9 +53,9 @@
     },
     "gradient_clipping": null,
     "train_constants": {
-        "max_epochs": 90,
+        "max_epochs": 1,
         "log_train_stats_every_iters": 100,
-        "save_every_epochs": 5
+        "save_every_epochs": 1
     },
     "resume_from": null
 }
